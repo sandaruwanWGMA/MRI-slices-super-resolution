@@ -1,5 +1,6 @@
 import nibabel as nib
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
 
 base_directory = os.getcwd()
@@ -20,7 +21,6 @@ else:
     print(f"File does not exist at path: {file_path}")
 
 header = nib_file.header
-print(header)
 
 # Downsample the slices by selecting every 5th slice
 downsampled_data = nib_file.slicer[::5, :, :]
@@ -33,7 +33,6 @@ nib.save(downsampled_data, output_path)
 downsampled_file = nib.load(output_path)
 
 downsampled_header = downsampled_data.header
-print(downsampled_header)
 
 header_df = pd.DataFrame(
     {
@@ -51,10 +50,6 @@ header_df.to_excel(
     "../Results/After removing rotations and inccorect affine matrix of downsampled data/original_vs_sampled_header_params.xlsx",
     index=False,
 )
-
-header_df
-
-import matplotlib.pyplot as plt
 
 
 def show_slices(slices):

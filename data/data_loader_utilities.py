@@ -4,7 +4,6 @@ import torch
 
 
 def normalize_min_max(tensor):
-    # Subtract the minimum and divide by the range
     min_val = tensor.min()
     max_val = tensor.max()
     normalized_tensor = (tensor - min_val) / (max_val - min_val)

@@ -6,19 +6,19 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.nn.functional import interpolate
 
-from models.build_model import build_netG, build_netD
+from model.build_model import build_netG, build_netD
 from data.customdataset import CustomDataset
-from models.losses import gdloss
+from model.losses import gdloss
 from utils.util import new_state_dict
 from options import Options
 
 opt = Options().parse()
 opt.phase = "train"
-opt.dataset = "iseg"
 print(opt)
 
 data_set = CustomDataset(opt)
 print("Image numbers:", data_set.img_size)
+
 dataloader = torch.utils.data.DataLoader(
     data_set, batch_size=opt.batch_size, shuffle=True, num_workers=int(opt.workers)
 )
@@ -67,98 +67,108 @@ StepLR_D = torch.optim.lr_scheduler.StepLR(
 )
 
 print("start training")
-for epoch in range(opt.nEpochs):
-    mean_generator_adversarial_loss = 0.0
-    mean_generator_l2_loss = 0.0
-    mean_generator_gdl_loss = 0.0
-    mean_generator_total_loss = 0.0
-    mean_discriminator_loss = 0.0
+# for epoch in range(opt.nEpochs):
+#     mean_generator_adversarial_loss = 0.0
+#     mean_generator_l2_loss = 0.0
+#     mean_generator_gdl_loss = 0.0
+#     mean_generator_total_loss = 0.0
+#     mean_discriminator_loss = 0.0
 
-    for i, data in enumerate(dataloader):
-        # get input data
-        high_real_patches = data["high_img_patches"]  # [batch_size,num_patches,C,D,H,W]
-        for k in range(0, opt.num_patches):
-            high_real_patch = high_real_patches[:, k]  # [BCDHW]
-            low_patch = interpolate(high_real_patch, scale_factor=0.5)
-            if use_gpu:
-                high_real_patch = high_real_patch.cuda()
-                # generate fake data
-                high_gen = generator(low_patch.cuda())
-            else:
-                high_gen = generator(low_patch)
+#     for i, data in enumerate(dataloader):
+#         # get input data
+#         high_real_patches = data["high_img_patches"]  # [batch_size,num_patches,C,D,H,W]
+#         for k in range(0, opt.num_patches):
+#             high_real_patch = high_real_patches[:, k]  # [BCDHW]
+#             low_patch = interpolate(high_real_patch, scale_factor=0.5)
+#             if use_gpu:
+#                 high_real_patch = high_real_patch.cuda()
+#                 # generate fake data
+#                 high_gen = generator(low_patch.cuda())
+#             else:
+#                 high_gen = generator(low_patch)
 
-            ######### Train discriminator #########
-            discriminator.zero_grad()
+#             ######### Train discriminator #########
+#             discriminator.zero_grad()
 
-            discriminator_loss = 0.5 * adversarial_criterion(
-                discriminator(high_real_patch), target_real
-            ) + 0.5 * adversarial_criterion(
-                discriminator(high_gen.detach()), target_fake
-            )
+#             discriminator_loss = 0.5 * adversarial_criterion(
+#                 discriminator(high_real_patch), target_real
+#             ) + 0.5 * adversarial_criterion(
+#                 discriminator(high_gen.detach()), target_fake
+#             )
 
-            mean_discriminator_loss += discriminator_loss
-            discriminator_loss.backward()
-            optim_discriminator.step()
+#             mean_discriminator_loss += discriminator_loss
+#             discriminator_loss.backward()
+#             optim_discriminator.step()
 
-            ######### Train generator #########
-            generator.zero_grad()
+#             ######### Train generator #########
+#             generator.zero_grad()
 
-            generator_gdl_loss = opt.gdl * gdloss(high_real_patch, high_gen)
-            mean_generator_gdl_loss += generator_gdl_loss
+#             generator_gdl_loss = opt.gdl * gdloss(high_real_patch, high_gen)
+#             mean_generator_gdl_loss += generator_gdl_loss
 
-            generator_l2_loss = nn.MSELoss()(high_real_patch, high_gen)
-            mean_generator_l2_loss += generator_l2_loss
+#             generator_l2_loss = nn.MSELoss()(high_real_patch, high_gen)
+#             mean_generator_l2_loss += generator_l2_loss
 
-            generator_adversarial_loss = adversarial_criterion(
-                discriminator(high_gen), target_real
-            )
-            mean_generator_adversarial_loss += generator_adversarial_loss
+#             generator_adversarial_loss = adversarial_criterion(
+#                 discriminator(high_gen), target_real
+#             )
+#             mean_generator_adversarial_loss += generator_adversarial_loss
 
-            generator_total_loss = (
-                generator_gdl_loss
-                + generator_l2_loss
-                + opt.advW * generator_adversarial_loss
-            )
-            mean_generator_total_loss += generator_total_loss
+#             generator_total_loss = (
+#                 generator_gdl_loss
+#                 + generator_l2_loss
+#                 + opt.advW * generator_adversarial_loss
+#             )
+#             mean_generator_total_loss += generator_total_loss
 
-            generator_total_loss.backward()
-            optim_generator.step()
+#             generator_total_loss.backward()
+#             optim_generator.step()
 
-        ######### Status and display #########
-        sys.stdout.write(
-            "\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (GDL/L2/Adv/Total): %.4f/%.4f/%.4f/%.4f"
-            % (
-                epoch,
-                opt.nEpochs,
-                i,
-                len(dataloader),
-                discriminator_loss,
-                generator_gdl_loss,
-                generator_l2_loss,
-                generator_adversarial_loss,
-                generator_total_loss,
-            )
-        )
+#         ######### Status and display #########
+#         sys.stdout.write(
+#             "\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (GDL/L2/Adv/Total): %.4f/%.4f/%.4f/%.4f"
+#             % (
+#                 epoch,
+#                 opt.nEpochs,
+#                 i,
+#                 len(dataloader),
+#                 discriminator_loss,
+#                 generator_gdl_loss,
+#                 generator_l2_loss,
+#                 generator_adversarial_loss,
+#                 generator_total_loss,
+#             )
+#         )
 
-    StepLR_G.step()
-    StepLR_D.step()
+#     StepLR_G.step()
+#     StepLR_D.step()
 
-    if epoch % opt.save_fre == 0:
-        # Do checkpointing
-        torch.save(generator.state_dict(), "%s/g.pth" % opt.checkpoints_dir)
-        torch.save(discriminator.state_dict(), "%s/d.pth" % opt.checkpoints_dir)
+#     if epoch % opt.save_fre == 0:
+#         # Do checkpointing
+#         torch.save(generator.state_dict(), "%s/g.pth" % opt.checkpoints_dir)
+#         torch.save(discriminator.state_dict(), "%s/d.pth" % opt.checkpoints_dir)
 
-    sys.stdout.write(
-        "\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (GDL/L2/Adv/Total): %.4f/%.4f/%.4f/%.4f\n"
-        % (
-            epoch,
-            opt.nEpochs,
-            i,
-            len(dataloader),
-            mean_discriminator_loss / len(dataloader) / opt.num_patches,
-            mean_generator_gdl_loss / len(dataloader) / opt.num_patches,
-            mean_generator_l2_loss / len(dataloader) / opt.num_patches,
-            mean_generator_adversarial_loss / len(dataloader) / opt.num_patches,
-            mean_generator_total_loss / len(dataloader) / opt.num_patches,
-        )
-    )
+#     sys.stdout.write(
+#         "\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (GDL/L2/Adv/Total): %.4f/%.4f/%.4f/%.4f\n"
+#         % (
+#             epoch,
+#             opt.nEpochs,
+#             i,
+#             len(dataloader),
+#             mean_discriminator_loss / len(dataloader) / opt.num_patches,
+#             mean_generator_gdl_loss / len(dataloader) / opt.num_patches,
+#             mean_generator_l2_loss / len(dataloader) / opt.num_patches,
+#             mean_generator_adversarial_loss / len(dataloader) / opt.num_patches,
+#             mean_generator_total_loss / len(dataloader) / opt.num_patches,
+#         )
+#     )
+
+
+# for i, data in enumerate(dataloader):
+#     # get input data
+#     high_real_patches = data["high_img_patches"]
+#     print(high_real_patches)
+
+
+# for i, data in enumerate(dataloader):
+#     print(data)

@@ -39,7 +39,7 @@ class Options:
             help="learning rate for discriminator",
         )
         parser.add_argument(
-            "--workers", default=1, type=int, help="number of data loading workers"
+            "--workers", default=0, type=int, help="number of data loading workers"
         )
         parser.add_argument(
             "--gdl", type=float, default=1e-7, help="weight for gdl loss"

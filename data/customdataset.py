@@ -29,8 +29,11 @@ class CustomDataset(data.Dataset):
     def __getitem__(self, index):
         img_path = self.img_paths[index % self.img_size]
         high_img = np.array(nib.load(img_path).get_fdata()).astype(np.float32)[
-            :, 18:178, 75:203, :
+            18:178, 75:203, :
         ]  # [H,W,D,1]
+
+        print(f"Loaded image from {img_path} with dimensions: {high_img.shape}")
+
         high_img_patches = make_patches(
             high_img, margin=self.opt.margin, num_patches=self.opt.num_patches
         )

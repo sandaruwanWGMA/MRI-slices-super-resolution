@@ -1,4 +1,5 @@
 import torch
+
 """
 def gdloss(real,fake):
     dx_real = real[:, :, :, 1:, :] - real[:, :, :, :-1, :] #[BCHWD]
@@ -13,10 +14,12 @@ def gdloss(real,fake):
               torch.sum(torch.pow(torch.abs(dz_real) - torch.abs(dz_fake),2),dim=(2,3,4))
     return torch.sum(gd_loss)"""
 
-def gdloss(real,fake):
-    dreal = real[:, :, 1:, 1:, 1:] - real[:, :, :-1, :-1, :-1] #[BCHWD]
+
+def gdloss(real, fake):
+    # Ensure tensors are the same size
+    if real.size() != fake.size():
+        raise ValueError("Input tensors must have the same size.")
+    dreal = real[:, :, 1:, 1:, 1:] - real[:, :, :-1, :-1, :-1]  # [BCHWD]
     dfake = fake[:, :, 1:, 1:, 1:] - fake[:, :, :-1, :-1, :-1]
-    gd_loss = torch.sum((torch.abs(dreal) - torch.abs(dfake))**2, dim=(0, 1, 2, 3, 4))
-
+    gd_loss = torch.sum((torch.abs(dreal) - torch.abs(dfake)) ** 2, dim=(0, 1, 2, 3, 4))
     return gd_loss
-

@@ -14,6 +14,8 @@ from options import Options
 
 from torch.utils.data import DataLoader
 
+import torch.nn.functional as F
+
 if __name__ == "__main__":
     use_gpu = False
     opt = Options().parse()
@@ -126,6 +128,9 @@ if __name__ == "__main__":
                     high_gen.shape,
                 )
 
+                print("Shape of high_real_patch:", high_real_patch.shape)
+                print("Shape of high_gen:", high_gen.shape)
+
                 if use_gpu:
                     high_real_patch = high_real_patch.cuda()
                     # generate fake data
@@ -189,6 +194,20 @@ if __name__ == "__main__":
                 ######### Train generator #########
                 generator.zero_grad()
 
+                # Before using high_gen for calculating gdloss
+                if high_gen.size() != high_real_patch.size():
+                    # Adjust high_gen to match the size of high_real_patch
+                    high_gen = F.interpolate(
+                        high_gen,
+                        size=(
+                            high_real_patch.size(2),
+                            high_real_patch.size(3),
+                            high_real_patch.size(4),
+                        ),
+                        mode="trilinear",
+                        align_corners=False,
+                    )
+
                 # Generator losses calculation
                 generator_gdl_loss = opt.gdl * gdloss(high_real_patch, high_gen)
                 mean_generator_gdl_loss += (
@@ -237,29 +256,29 @@ if __name__ == "__main__":
                 print("Shape of generated patches:", high_gen.shape)
 
             ######### Status and display #########
-            # sys.stdout.write(
-            #     "\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (GDL/L2/Adv/Total): %.4f/%.4f/%.4f/%.4f"
-            #     % (
-            #         epoch,
-            #         opt.nEpochs,
-            #         i,
-            #         len(dataloader),
-            #         discriminator_loss,
-            #         generator_gdl_loss,
-            #         generator_l2_loss,
-            #         generator_adversarial_loss,
-            #         generator_total_loss,
-            #     )
-            # )
-
-            # Print losses to monitor training
-            print(
-                f"Epoch [{epoch+1}/{opt.nEpochs}], Step [{i+1}/{len(dataloader)}], "
-                f"Discriminator Loss: {discriminator_loss.item()}, Generator Loss: {generator_loss.item()}"
+            sys.stdout.write(
+                "\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (GDL/L2/Adv/Total): %.4f/%.4f/%.4f/%.4f"
+                % (
+                    epoch,
+                    opt.nEpochs,
+                    i,
+                    len(dataloader),
+                    discriminator_loss,
+                    generator_gdl_loss,
+                    generator_l2_loss,
+                    generator_adversarial_loss,
+                    generator_total_loss,
+                )
             )
 
         StepLR_G.step()
         StepLR_D.step()
+
+        # Before saving checkpoints, ensure the directory exists
+        if not os.path.exists(opt.checkpoints_dir):
+            os.makedirs(
+                opt.checkpoints_dir
+            )  # Create the directory if it does not exist
 
         if epoch % opt.save_fre == 0:
             # Do checkpointing
